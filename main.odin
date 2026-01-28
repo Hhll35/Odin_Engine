@@ -27,9 +27,6 @@ main :: proc() {
 	glfw.WindowHint(glfw.OPENGL_PROFILE,glfw.OPENGL_CORE_PROFILE)
 	
 	// Initialize glfw
-	// GLFW_TRUE if successful, or GLFW_FALSE if an error occurred.
-	// GLFW_TRUE = 1
-	// GLFW_FALSE = 0
 	if(!glfw.Init()){
 		// Print Line
 		fmt.println("Failed to initialize GLFW")
