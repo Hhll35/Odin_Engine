@@ -10,7 +10,7 @@ import gl "vendor:OpenGL"
 import "vendor:glfw"
 
 
-PROGRAMNAME :: "Program"
+PROGRAMNAME :: "Odin Engine"
 
 // GL_VERSION define the version of OpenGL to use. Here we use 4.6 which is the newest version
 GL_MAJOR_VERSION : c.int : 4
@@ -37,7 +37,7 @@ main :: proc() {
 
 	// Create the window
 	// Return WindowHandle rawPtr
-	window := glfw.CreateWindow(512, 512, PROGRAMNAME, nil, nil)
+	window := glfw.CreateWindow(640, 480, PROGRAMNAME, nil, nil)
 
 	defer glfw.DestroyWindow(window)
 
@@ -90,7 +90,7 @@ update :: proc(){
 draw :: proc(){
 	// Set the opengl clear color
 	// 0-1 rgba values
-	gl.ClearColor(0.2, 0.3, 0.3, 1.0)
+	gl.ClearColor(0.329, 0.584, 0.929, 1.0)
 	// Clear the screen with the set clearcolor
 	gl.Clear(gl.COLOR_BUFFER_BIT)
 
