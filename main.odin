@@ -126,11 +126,11 @@ process_input:: proc(window: glfw.WindowHandle){
     if(glfw.GetKey(window,glfw.KEY_ESCAPE) == glfw.PRESS){
         glfw.SetWindowShouldClose(window, true)
     }
-    if(glfw.GetKey(window, glfw.KEY_W) == glfw.PRESS){
-     gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE);
-    }
+    // if(glfw.GetKey(window, glfw.KEY_W) == glfw.PRESS){
+    //  gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE);
+    // }
 
-    if(glfw.GetKey(window, glfw.KEY_F) == glfw.PRESS){
-     gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL);
-    }
+    // if(glfw.GetKey(window, glfw.KEY_F) == glfw.PRESS){
+    //  gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL);
+    // }
 }
