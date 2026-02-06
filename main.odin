@@ -1,116 +1,136 @@
 package main
 
 import "core:fmt"
-// C interoperation compatibility
-import "core:c"
-
-// Here we import OpenGL and rename it to gl for short
+import glfw "vendor:glfw"
 import gl "vendor:OpenGL"
-// We use GLFW for cross platform window creation and input handling
-import "vendor:glfw"
 
 
-PROGRAMNAME :: "Odin Engine"
+//Const set up
+	WINDOW_WIDTH  :: 854
+	WINDOW_HEIGHT :: 480
 
-// GL_VERSION define the version of OpenGL to use. Here we use 4.6 which is the newest version
-GL_MAJOR_VERSION : c.int : 4
-// Constant with type inference
-GL_MINOR_VERSION :: 6
+    GL_VERSION_MAJOR :: 4
+    GL_VERSION_MINOR :: 1
 
-running : b32 = true
+//shader source
+    vertex_source :cstring =`#version 330 core
+    layout (location = 0) in vec3 aPos;
+    void main()
+    {
+       gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+    }`; 
+
+    fragment_source:cstring = `#version 330 core
+    out vec4 FragColor;
+    void main()
+    {
+       FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
+    }`;
+
+
 
 main :: proc() {
-	// Set Window Hints
-	glfw.WindowHint(glfw.RESIZABLE, 1)
-	glfw.WindowHint(glfw.CONTEXT_VERSION_MAJOR,GL_MAJOR_VERSION) 
-	glfw.WindowHint(glfw.CONTEXT_VERSION_MINOR,GL_MINOR_VERSION)
-	glfw.WindowHint(glfw.OPENGL_PROFILE,glfw.OPENGL_CORE_PROFILE)
-	
-	// Initialize glfw
-	if(!glfw.Init()){
-		// Print Line
-		fmt.println("Failed to initialize GLFW")
-		// Return early
-		return
-	}
-	defer glfw.Terminate()
+//initialise glfw
+    glfw.Init()
+    defer glfw.Terminate()
 
-	// Create the window
-	// Return WindowHandle rawPtr
-	window := glfw.CreateWindow(640, 480, PROGRAMNAME, nil, nil)
+    glfw.WindowHint(glfw.RESIZABLE, glfw.TRUE)
+    glfw.WindowHint(glfw.OPENGL_FORWARD_COMPAT, glfw.TRUE)
+    glfw.WindowHint(glfw.CONTEXT_VERSION_MAJOR, GL_VERSION_MAJOR)
+    glfw.WindowHint(glfw.CONTEXT_VERSION_MINOR, GL_VERSION_MINOR)
+    glfw.WindowHint(glfw.OPENGL_PROFILE,glfw.OPENGL_CORE_PROFILE)
+    window_handle :glfw.WindowHandle= glfw.CreateWindow(WINDOW_WIDTH,WINDOW_HEIGHT,"Odin Engine", nil,nil)
+    if (window_handle == nil){
+    fmt.eprint("Failed to create glfw window! \n")
+        }
+    glfw.MakeContextCurrent(window_handle);
+    glfw.SwapInterval(0);
+    glfw.SetFramebufferSizeCallback(window_handle,frame_buffer_size_callback)
+  //OpenGL set up
+    gl.load_up_to(GL_VERSION_MAJOR, GL_VERSION_MINOR, proc(p: rawptr, name: cstring) {
+		(^rawptr)(p)^ = glfw.GetProcAddress(name);
+	});
 
-	defer glfw.DestroyWindow(window)
+    gl.Viewport(0,0,WINDOW_WIDTH,WINDOW_HEIGHT);
+    //Shader set up
+    fragmentShader,vertexShader: u32;
+    vertexShader = gl.CreateShader(gl.VERTEX_SHADER)
+    fragmentShader = gl.CreateShader(gl.FRAGMENT_SHADER)
 
-	// If the window pointer is invalid
-	if window == nil {
-		fmt.println("Unable to create window")
-		return
-	}
-	
-	glfw.MakeContextCurrent(window)
-	
-	glfw.SwapInterval(1)
+    gl.ShaderSource(vertexShader,1,&vertex_source,nil)
+    gl.ShaderSource(fragmentShader,1,&fragment_source,nil)
+    gl.CompileShader(vertexShader)
+    gl.CompileShader(fragmentShader)
+    
 
-	// This function sets the key callback of the specified window, which is called when a key is pressed, repeated or released.
-	glfw.SetKeyCallback(window, key_callback)
+    shader_success: i32;
+    shader_program : u32;
+    shader_program = gl.CreateProgram();
+    gl.AttachShader(shader_program,vertexShader);
+    gl.AttachShader(shader_program,fragmentShader);
+    gl.LinkProgram(shader_program);
+    //Delete shaders after linking
+    gl.DeleteShader(vertexShader)
+    gl.DeleteShader(fragmentShader)
 
-	// This function sets the framebuffer resize callback of the specified window, which is called when the framebuffer of the specified window is resized.
-	glfw.SetFramebufferSizeCallback(window, size_callback)
+    gl.GetProgramiv(shader_program,gl.LINK_STATUS,&shader_success)
+    if (shader_success == 0){
+        fmt.eprintln("SHADER ERROR")
+        return
+    }
 
-	// Set OpenGL Context bindings using the helper function
+	//vertices
+    vertices :=[?]f32{0.0,0.5, 0.0,
+                  -0.5, -0.5, 0.0,
+                  0.5, -0.5, 0.0,
+             }
 
-	gl.load_up_to(int(GL_MAJOR_VERSION), GL_MINOR_VERSION, glfw.gl_set_proc_address) 
-	
-	init()
-	
-	for (!glfw.WindowShouldClose(window) && running) {
-		// Process waiting events in queue
-		glfw.PollEvents()
-		
-		update()
-		draw()
+	//create VAO and VBO
+    VAO: u32;
+    gl.GenVertexArrays(1,&VAO);
+    gl.BindVertexArray(VAO);
 
-		// This function swaps the front and back buffers of the specified window.
-		glfw.SwapBuffers((window))
-	}
 
-	exit()
-	
+    VBO : u32;
+    gl.GenBuffers(1,&VBO);
+    
+    gl.BindBuffer(gl.ARRAY_BUFFER,VBO)
+    gl.BufferData(gl.ARRAY_BUFFER,size_of(vertices),&vertices,gl.STATIC_DRAW)
+
+    gl.VertexAttribPointer(0,3,gl.FLOAT,gl.FALSE, size_of(f32)*3, cast(uintptr)0)
+    gl.EnableVertexAttribArray(0)
+    gl.UseProgram(shader_program);
+
+    for (!glfw.WindowShouldClose(window_handle)){
+        process_input(window_handle);
+        glfw.PollEvents();
+
+        gl.ClearColor(0.329,0.584,0.929,1.0);
+
+        gl.Clear(gl.COLOR_BUFFER_BIT);
+        gl.UseProgram(shader_program);
+        gl.BindVertexArray(VAO);
+        gl.DrawArrays(gl.TRIANGLES,0,3);
+
+        glfw.SwapBuffers(window_handle);
+    }
+
+}
+
+frame_buffer_size_callback :: proc "c" (window: glfw.WindowHandle, width,height :i32){
+    gl.Viewport(0,0,width,height);
 }
 
 
-init :: proc(){
-	// Own initialization code there
-}
+process_input:: proc(window: glfw.WindowHandle){
+    if(glfw.GetKey(window,glfw.KEY_ESCAPE) == glfw.PRESS){
+        glfw.SetWindowShouldClose(window, true)
+    }
+    if(glfw.GetKey(window, glfw.KEY_W) == glfw.PRESS){
+     gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE);
+    }
 
-update :: proc(){
-	// Own update code here
-}
-
-draw :: proc(){
-	// Set the opengl clear color
-	// 0-1 rgba values
-	gl.ClearColor(0.329, 0.584, 0.929, 1.0)
-	// Clear the screen with the set clearcolor
-	gl.Clear(gl.COLOR_BUFFER_BIT)
-
-	// Own drawing code here
-}
-
-exit :: proc(){
-	// Own termination code here
-}
-
-// Called when glfw keystate changes
-key_callback :: proc "c" (window: glfw.WindowHandle, key, scancode, action, mods: i32) {
-	// Exit program on escape pressed
-	if key == glfw.KEY_ESCAPE {
-		running = false
-	}
-}
-
-// Called when glfw window changes size
-size_callback :: proc "c" (window: glfw.WindowHandle, width, height: i32) {
-	// Set the OpenGL viewport size
-	gl.Viewport(0, 0, width, height)
+    if(glfw.GetKey(window, glfw.KEY_F) == glfw.PRESS){
+     gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL);
+    }
 }
